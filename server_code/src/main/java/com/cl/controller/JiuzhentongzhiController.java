@@ -57,10 +57,10 @@ public class JiuzhentongzhiController {
     public void retryFailedNotifications() {
         try {
             // 查询所有发送失败的通知
-            EntityWrapper&lt;JiuzhentongzhiEntity&gt; ew = new EntityWrapper&lt;&gt;();
+            EntityWrapper<JiuzhentongzhiEntity> ew = new EntityWrapper<>();
             ew.eq("tongzhizhuangtai", 2); // 状态2表示发送失败
             
-            List&lt;JiuzhentongzhiEntity&gt; failedList = jiuzhentongzhiService.selectList(ew);
+            List<JiuzhentongzhiEntity> failedList = jiuzhentongzhiService.selectList(ew);
             
             for (JiuzhentongzhiEntity tongzhi : failedList) {
                 retrySendNotification(tongzhi);
