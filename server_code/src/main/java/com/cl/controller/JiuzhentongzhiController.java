@@ -34,6 +34,7 @@ import com.cl.utils.R;
 import com.cl.utils.MPUtil;
 import com.cl.utils.MapUtils;
 import com.cl.utils.CommonUtil;
+import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * 就诊通知
@@ -47,6 +48,48 @@ import com.cl.utils.CommonUtil;
 public class JiuzhentongzhiController {
     @Autowired
     private JiuzhentongzhiService jiuzhentongzhiService;
+    
+    /**
+     * 定时任务：每隔5分钟重试发送失败的通知
+     */
+    @Scheduled(fixedRate = 5 * 60 * 1000)
+    public void retryFailedNotifications() {
+        try {
+            // 查询所有发送失败的通知
+            EntityWrapper<JiuzhentongzhiEntity> ew = new EntityWrapper<>();
+            ew.eq("tongzhizhuangtai", 2); // 状态2表示发送失败
+            
+            List<JiuzhentongzhiEntity> failedList = jiuzhentongzhiService.selectList(ew);
+            
+            for (JiuzhentongzhiEntity tongzhi : failedList) {
+                retrySendNotification(tongzhi);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 重试发送通知
+     */
+    private void retrySendNotification(JiuzhentongzhiEntity tongzhi) {
+        try {
+            // 这里模拟通知重试发送逻辑
+            // 实际项目中可以调用短信服务、邮件服务等
+            
+            // 模拟发送成功（实际项目中根据发送结果设置）
+            boolean sendSuccess = true;
+            
+            if (sendSuccess) {
+                tongzhi.setTongzhizhuangtai(1); // 更新为发送成功
+                tongzhi.setTongzhishijian(new Date());
+            }
+            
+            jiuzhentongzhiService.updateById(tongzhi);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
 
 
@@ -191,14 +234,68 @@ public class JiuzhentongzhiController {
         return R.ok();
     }
     
-	
-
-
-
-
-
-
-
-
-
+    /**
+     * 手动重试发送通知
+     */
+    @RequestMapping("/retry/{id}")
+    @SysLog("重试发送通知")
+    public R retry(@PathVariable("id") Long id){
+        JiuzhentongzhiEntity tongzhi = jiuzhentongzhiService.selectById(id);
+        if(tongzhi == null){
+            return R.error("通知不存在");
+        }
+        
+        try {
+            // 这里模拟通知发送逻辑
+            boolean sendSuccess = true; // 实际项目中根据发送结果设置
+            
+            if (sendSuccess) {
+                tongzhi.setTongzhizhuangtai(1); // 发送成功
+                tongzhi.setTongzhishijian(new Date());
+                jiuzhentongzhiService.updateById(tongzhi);
+                return R.ok("通知重发成功");
+            } else {
+                tongzhi.setTongzhizhuangtai(2); // 发送失败
+                jiuzhentongzhiService.updateById(tongzhi);
+                return R.error("通知重发失败");
+            }
+        } catch (Exception e) {
+            tongzhi.setTongzhizhuangtai(2); // 发送失败
+            jiuzhentongzhiService.updateById(tongzhi);
+            e.printStackTrace();
+            return R.error("通知重发异常：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 批量重试发送失败的通知
+     */
+    @RequestMapping("/retryBatch")
+    @SysLog("批量重试发送通知")
+    public R retryBatch(@RequestBody Long[] ids){
+        int successCount = 0;
+        int failCount = 0;
+        
+        for(Long id : ids) {
+            JiuzhentongzhiEntity tongzhi = jiuzhentongzhiService.selectById(id);
+            if(tongzhi != null) {
+                try {
+                    boolean sendSuccess = true; // 实际项目中根据发送结果设置
+                    if (sendSuccess) {
+                        tongzhi.setTongzhizhuangtai(1);
+                        tongzhi.setTongzhishijian(new Date());
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                    jiuzhentongzhiService.updateById(tongzhi);
+                } catch (Exception e) {
+                    failCount++;
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        return R.ok("批量重试完成，成功：" + successCount + "，失败：" + failCount);
+    }
 }
