@@ -1,0 +1,52 @@
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE Files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Node.js (前端项目)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+
+# Java (后端项目)
+*.class
+*.jar
+*.war
+*.ear
+target/
+build/
+.gradle/
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Database files
+*.sql
+*.sqlite
+*.db
+
+# Upload files (if any)
+upload/
+uploads/
+files/
