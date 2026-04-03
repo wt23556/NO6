@@ -26,8 +26,10 @@ import com.cl.annotation.SysLog;
 
 import com.cl.entity.YishengyuyueEntity;
 import com.cl.entity.view.YishengyuyueView;
+import com.cl.entity.JiuzhentongzhiEntity;
 
 import com.cl.service.YishengyuyueService;
+import com.cl.service.JiuzhentongzhiService;
 import com.cl.service.TokenService;
 import com.cl.utils.PageUtils;
 import com.cl.utils.R;
@@ -47,6 +49,8 @@ import com.cl.utils.CommonUtil;
 public class YishengyuyueController {
     @Autowired
     private YishengyuyueService yishengyuyueService;
+    @Autowired
+    private JiuzhentongzhiService jiuzhentongzhiService;
 
 
 
@@ -160,7 +164,71 @@ public class YishengyuyueController {
     public R add(@RequestBody YishengyuyueEntity yishengyuyue, HttpServletRequest request){
     	//ValidatorUtils.validateEntity(yishengyuyue);
         yishengyuyueService.insert(yishengyuyue);
+        
+        // 预约成功后立即创建就诊通知
+        createJiuzhentongzhi(yishengyuyue);
+        
         return R.ok();
+    }
+    
+    /**
+     * 创建就诊通知
+     */
+    private void createJiuzhentongzhi(YishengyuyueEntity yishengyuyue) {
+        try {
+            JiuzhentongzhiEntity tongzhi = new JiuzhentongzhiEntity();
+            
+            // 生成通知编号
+            String tongzhibianhao = "TZ" + System.currentTimeMillis();
+            tongzhi.setTongzhibianhao(tongzhibianhao);
+            
+            // 复制预约信息到通知
+            tongzhi.setYishengzhanghao(yishengyuyue.getYishengzhanghao());
+            tongzhi.setDianhua(yishengyuyue.getDianhua());
+            tongzhi.setJiuzhenshijian(yishengyuyue.getYuyueshijian());
+            tongzhi.setZhanghao(yishengyuyue.getZhanghao());
+            tongzhi.setShouji(yishengyuyue.getShouji());
+            tongzhi.setTongzhibeizhu("预约成功，请按时就诊！");
+            tongzhi.setTongzhishijian(new Date());
+            tongzhi.setTongzhizhuangtai(0); // 初始状态为待发送
+            tongzhi.setAddtime(new Date());
+            
+            // 保存通知
+            jiuzhentongzhiService.insert(tongzhi);
+            
+            // 立即发送通知
+            sendNotification(tongzhi);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 发送通知
+     */
+    private void sendNotification(JiuzhentongzhiEntity tongzhi) {
+        try {
+            // 这里模拟通知发送逻辑
+            // 实际项目中可以调用短信服务、邮件服务等
+            
+            // 模拟发送成功
+            boolean sendSuccess = true; // 实际项目中根据发送结果设置
+            
+            if (sendSuccess) {
+                tongzhi.setTongzhizhuangtai(1); // 发送成功
+            } else {
+                tongzhi.setTongzhizhuangtai(2); // 发送失败
+            }
+            
+            // 更新通知状态
+            jiuzhentongzhiService.updateById(tongzhi);
+            
+        } catch (Exception e) {
+            tongzhi.setTongzhizhuangtai(2); // 发送失败
+            jiuzhentongzhiService.updateById(tongzhi);
+            e.printStackTrace();
+        }
     }
 
 
